@@ -402,7 +402,7 @@ class HighResolutionNet(nn.Module):
         return nn.Sequential(*modules), num_inchannels
 
     def forward(self, x):
-        # h, w = x.size(2), x.size(3)
+        h, w = x.size(2), x.size(3)
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
@@ -436,11 +436,15 @@ class HighResolutionNet(nn.Module):
         x = self.stage4(x_list)
 
         # Head Part
-        height, width = x[0].size(2), x[0].size(3)
-        x1 = F.interpolate(x[1], size=(height, width), mode='bilinear', align_corners=False)
-        x2 = F.interpolate(x[2], size=(height, width), mode='bilinear', align_corners=False)
-        x3 = F.interpolate(x[3], size=(height, width), mode='bilinear', align_corners=False)
-        x = torch.cat([x[0], x1, x2, x3], 1)
+        # height, width = x[0].size(2), x[0].size(3)
+        # x1 = F.interpolate(x[1], size=(height, width), mode='bilinear', align_corners=False)
+        # x2 = F.interpolate(x[2], size=(height, width), mode='bilinear', align_corners=False)
+        # x3 = F.interpolate(x[3], size=(height, width), mode='bilinear', align_corners=False)
+        x0 = F.interpolate(x[0], size=(h, w), mode='bilinear', align_corners=False)
+        x1 = F.interpolate(x[1], size=(h, w), mode='bilinear', align_corners=False)
+        x2 = F.interpolate(x[2], size=(h, w), mode='bilinear', align_corners=False)
+        x3 = F.interpolate(x[3], size=(h, w), mode='bilinear', align_corners=False)
+        x = torch.cat([x0, x1, x2, x3], 1)
         x = self.head(x)
 
         return x

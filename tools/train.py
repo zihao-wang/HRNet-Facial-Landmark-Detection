@@ -12,7 +12,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.backends.cudnn as cudnn
-from tensorboardX import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import DataLoader
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
@@ -48,54 +48,12 @@ def main():
     cudnn.benchmark = config.CUDNN.BENCHMARK
     cudnn.determinstic = config.CUDNN.DETERMINISTIC
     cudnn.enabled = config.CUDNN.ENABLED
-
-    model = models.get_face_alignment_net(config)
-
-    # copy model files
-    writer_dict = {
-        'writer': SummaryWriter(log_dir=tb_log_dir),
-        'train_global_steps': 0,
-        'valid_global_steps': 0,
-    }
-
     gpus = list(config.GPUS)
-    model = nn.DataParallel(model, device_ids=gpus).cuda()
 
-    # loss
-    criterion = torch.nn.MSELoss(size_average=True).cuda()
-
-    optimizer = utils.get_optimizer(config, model)
-    best_nme = 100
-    last_epoch = config.TRAIN.BEGIN_EPOCH
-    if config.TRAIN.RESUME:
-        model_state_file = os.path.join(final_output_dir,
-                                        'latest.pth')
-        if os.path.islink(model_state_file):
-            checkpoint = torch.load(model_state_file)
-            last_epoch = checkpoint['epoch']
-            best_nme = checkpoint['best_nme']
-            model.load_state_dict(checkpoint['state_dict'])
-            optimizer.load_state_dict(checkpoint['optimizer'])
-            print("=> loaded checkpoint (epoch {})"
-                  .format(checkpoint['epoch']))
-        else:
-            print("=> no checkpoint found")
-
-    if isinstance(config.TRAIN.LR_STEP, list):
-        lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
-            optimizer, config.TRAIN.LR_STEP,
-            config.TRAIN.LR_FACTOR, last_epoch-1
-        )
-    else:
-        lr_scheduler = torch.optim.lr_scheduler.StepLR(
-            optimizer, config.TRAIN.LR_STEP,
-            config.TRAIN.LR_FACTOR, last_epoch-1
-        )
     dataset_type = get_dataset(config)
-
+    train_data = dataset_type(config, is_train=True)
     train_loader = DataLoader(
-        dataset=dataset_type(config,
-                             is_train=True),
+        dataset=train_data,
         batch_size=config.TRAIN.BATCH_SIZE_PER_GPU*len(gpus),
         shuffle=config.TRAIN.SHUFFLE,
         num_workers=config.WORKERS,
@@ -109,6 +67,51 @@ def main():
         num_workers=config.WORKERS,
         pin_memory=config.PIN_MEMORY
     )
+
+    # config.MODEL.NUM_JOINTS = train_data.get_num_points()
+    model = models.get_face_alignment_net(config)
+
+    # copy model files
+    writer_dict = {
+        'writer': SummaryWriter(log_dir=tb_log_dir),
+        'train_global_steps': 0,
+        'valid_global_steps': 0,
+    }
+
+    model = nn.DataParallel(model, device_ids=gpus).cuda()
+
+    # loss
+    criterion = torch.nn.MSELoss(size_average=True).cuda()
+
+    optimizer = utils.get_optimizer(config, model)
+
+    best_nme = 100
+    last_epoch = config.TRAIN.BEGIN_EPOCH
+
+    if isinstance(config.TRAIN.LR_STEP, list):
+        lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
+            optimizer, config.TRAIN.LR_STEP,
+            config.TRAIN.LR_FACTOR, last_epoch-1
+        )
+    else:
+        lr_scheduler = torch.optim.lr_scheduler.StepLR(
+            optimizer, config.TRAIN.LR_STEP,
+            config.TRAIN.LR_FACTOR, last_epoch-1
+        )
+
+    if config.TRAIN.RESUME:
+        model_state_file = os.path.join(final_output_dir,
+                                        'latest.pth')
+        if os.path.islink(model_state_file):
+            checkpoint = torch.load(model_state_file)
+            last_epoch = checkpoint['epoch']
+            best_nme = checkpoint['best_nme']
+            model.load_state_dict(checkpoint['state_dict'])
+            optimizer.load_state_dict(checkpoint['optimizer'])
+            print("=> loaded checkpoint (epoch {})"
+                  .format(checkpoint['epoch']))
+        else:
+            print("=> no checkpoint found")
 
     for epoch in range(last_epoch, config.TRAIN.END_EPOCH):
         lr_scheduler.step()
