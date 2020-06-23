@@ -59,9 +59,9 @@ def main():
         num_workers=config.WORKERS,
         pin_memory=config.PIN_MEMORY)
 
+    val_data = dataset_type(config, is_train=False)
     val_loader = DataLoader(
-        dataset=dataset_type(config,
-                             is_train=False),
+        dataset=val_data,
         batch_size=config.TEST.BATCH_SIZE_PER_GPU*len(gpus),
         shuffle=False,
         num_workers=config.WORKERS,
@@ -114,10 +114,10 @@ def main():
             print("=> no checkpoint found")
 
     for epoch in range(last_epoch, config.TRAIN.END_EPOCH):
-        lr_scheduler.step()
-
         function.train(config, train_loader, model, criterion,
                        optimizer, epoch, writer_dict)
+
+        lr_scheduler.step()
 
         # evaluate
         nme, predictions = function.validate(config, val_loader, model,
@@ -134,6 +134,16 @@ def main():
              "best_nme": best_nme,
              "optimizer": optimizer.state_dict(),
              }, predictions, is_best, final_output_dir, 'checkpoint_{}.pth'.format(epoch))
+        if is_best:
+            for i in range(len(predictions)):
+                afile = val_data.annotation_files[i]
+                new_afile = '{}.{}.txt'.format(afile, os.path.basename(args.cfg).split('.')[0])
+                with open(new_afile, 'wt') as f:
+                    pts = predictions[i].cpu().numpy()
+                    for j in range(len(pts)):
+                        f.write("{},{}\n".format(pts[j][1]/val_data.factor[1], 
+                                                 pts[j][0]/val_data.factor[0]))
+
 
     final_model_state_file = os.path.join(final_output_dir,
                                           'final_state.pth')

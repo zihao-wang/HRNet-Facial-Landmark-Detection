@@ -38,7 +38,7 @@ def compute_nme(preds, meta):
     targets = meta['pts']
     preds = preds.numpy()
     target = targets.cpu().numpy()
-
+    
     N = preds.shape[0]
     L = preds.shape[1]
     rmse = np.zeros(N)

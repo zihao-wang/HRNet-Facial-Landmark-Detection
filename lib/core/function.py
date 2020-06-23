@@ -117,8 +117,8 @@ def validate(config, val_loader, model, criterion, epoch, writer_dict):
 
     nme_count = 0
     nme_batch_sum = 0
-    count_failure_008 = 0
-    count_failure_010 = 0
+    count_failure_1 = 0
+    count_failure_3 = 0
     end = time.time()
 
     with torch.no_grad():
@@ -135,10 +135,10 @@ def validate(config, val_loader, model, criterion, epoch, writer_dict):
             # NME
             nme_temp = compute_nme(preds, meta)
             # Failure Rate under different threshold
-            failure_008 = (nme_temp > 0.08).sum()
-            failure_010 = (nme_temp > 0.10).sum()
-            count_failure_008 += failure_008
-            count_failure_010 += failure_010
+            failure_1 = (nme_temp > 1).sum()
+            failure_3 = (nme_temp > 3).sum()
+            count_failure_1 += failure_1
+            count_failure_3 += failure_3
 
             nme_batch_sum += np.sum(nme_temp)
             nme_count = nme_count + preds.size(0)
@@ -152,12 +152,12 @@ def validate(config, val_loader, model, criterion, epoch, writer_dict):
             end = time.time()
 
     nme = nme_batch_sum / nme_count
-    failure_008_rate = count_failure_008 / nme_count
-    failure_010_rate = count_failure_010 / nme_count
+    failure_1_rate = count_failure_1 / nme_count
+    failure_3_rate = count_failure_3 / nme_count
 
-    msg = 'Test Epoch {} time:{:.4f} loss:{:.4f} nme:{:.4f} [008]:{:.4f} ' \
-          '[010]:{:.4f}'.format(epoch, batch_time.avg, losses.avg, nme,
-                                failure_008_rate, failure_010_rate)
+    msg = 'Test Epoch {} time:{:.4f} loss:{:.4f} nme:{:.4f} [1px]:{:.4f} ' \
+          '[3px]:{:.4f}'.format(epoch, batch_time.avg, losses.avg, nme,
+                                failure_1_rate, failure_3_rate)
     logger.info(msg)
 
     if writer_dict:

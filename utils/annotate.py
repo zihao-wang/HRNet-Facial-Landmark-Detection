@@ -69,13 +69,14 @@ for fold in os.listdir(img_dir):
     txt_file = os.path.join(ann_dir, fold, "annotation.txt")
     img = Image.open(img_file)
     mat = np.asarray(img)
+    print(mat.shape)
     labels = flood_flow(mat, str(img_file))
     os.makedirs(os.path.join(ann_dir, fold), exist_ok=True)
-    with open(txt_file, 'wt') as f:
-        for color in feat_map:
-            f.write(color + "\n")
-            for x, y in labels[color]:
-                f.write("{}, {}\n".format(x, y))
+    # with open(txt_file, 'wt') as f:
+    #     for color in feat_map:
+    #         f.write(color + "\n")
+    #         for x, y in labels[color]:
+    #             f.write("{}, {}\n".format(x, y))
     # counts += 1
     # if counts >= 20:
         # break
