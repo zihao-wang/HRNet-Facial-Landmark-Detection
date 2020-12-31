@@ -10,6 +10,7 @@ from __future__ import print_function
 
 import time
 import logging
+import tqdm
 
 import torch
 import numpy as np
@@ -47,22 +48,24 @@ def train(config, train_loader, model, critertion, optimizer,
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
-
     model.train()
     nme_count = 0
     nme_batch_sum = 0
 
     end = time.time()
-
-    for i, (inp, target, meta) in enumerate(train_loader):
+    for i, (inp, target, meta) in tqdm.tqdm(enumerate(train_loader)):
         # measure data time
         data_time.update(time.time()-end)
 
         # compute the output
         output = model(inp)
         target = target.cuda(non_blocking=True)
-
         loss = critertion(output, target)
+        wp = [10, 11, 12, 13, 26,27,28,29,30,31]
+        # for i in wp:
+        #     for j in range(len(target)):
+        #         loss = loss + critertion(output[j][i], target[j][i])
+        # loss = critertion(output, target) + pow((target[i][10][0] - inp[i][10][0]) , 2) + pow((target[i][10][1] - inp[i][10][1]), 2)
 
         # NME
         score_map = output.data.cpu()
@@ -102,6 +105,7 @@ def train(config, train_loader, model, critertion, optimizer,
     msg = 'Train Epoch {} time:{:.4f} loss:{:.4f} nme:{:.4f}'\
         .format(epoch, batch_time.avg, losses.avg, nme)
     logger.info(msg)
+    return losses.avg
 
 
 def validate(config, val_loader, model, criterion, epoch, writer_dict):
@@ -174,12 +178,9 @@ def inference(config, data_loader, model):
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
-
     num_classes = config.MODEL.NUM_JOINTS
     predictions = torch.zeros((len(data_loader.dataset), num_classes, 2))
-
     model.eval()
-
     nme_count = 0
     nme_batch_sum = 0
     count_failure_008 = 0
@@ -192,7 +193,6 @@ def inference(config, data_loader, model):
             output = model(inp)
             score_map = output.data.cpu()
             preds = decode_preds(score_map, meta['center'], meta['scale'], [64, 64])
-
             # NME
             nme_temp = compute_nme(preds, meta)
 

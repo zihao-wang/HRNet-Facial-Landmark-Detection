@@ -145,21 +145,17 @@ class HighResolutionModule(nn.Module):
         if stride != 1 or \
                 self.num_inchannels[branch_index] != num_channels[branch_index] * block.expansion:
             downsample = nn.Sequential(
-                nn.Conv2d(self.num_inchannels[branch_index],
-                          num_channels[branch_index] * block.expansion,
+                nn.Conv2d(self.num_inchannels[branch_index], num_channels[branch_index] * block.expansion,
                           kernel_size=1, stride=stride, bias=False),
-                BatchNorm2d(num_channels[branch_index] * block.expansion,
-                            momentum=BN_MOMENTUM),
+                BatchNorm2d(num_channels[branch_index] * block.expansion, momentum=BN_MOMENTUM),
             )
 
         layers = []
-        layers.append(block(self.num_inchannels[branch_index],
-                            num_channels[branch_index], stride, downsample))
-        self.num_inchannels[branch_index] = \
-            num_channels[branch_index] * block.expansion
+        layers.append(block(self.num_inchannels[branch_index], num_channels[branch_index], stride, downsample))
+
+        self.num_inchannels[branch_index] = num_channels[branch_index] * block.expansion
         for i in range(1, num_blocks[branch_index]):
-            layers.append(block(self.num_inchannels[branch_index],
-                                num_channels[branch_index]))
+            layers.append(block(self.num_inchannels[branch_index], num_channels[branch_index]))
 
         return nn.Sequential(*layers)
 
@@ -194,7 +190,7 @@ class HighResolutionModule(nn.Module):
                     # nn.Upsample(scale_factor=2**(j-i), mode='nearest')))
                 elif j == i:
                     fuse_layer.append(None)
-                else:
+                else:  # for j (output level) < i (input level), the greater level, the smaller resolution
                     conv3x3s = []
                     for k in range(i - j):
                         if k == i - j - 1:
@@ -202,16 +198,15 @@ class HighResolutionModule(nn.Module):
                             conv3x3s.append(nn.Sequential(
                                 nn.Conv2d(num_inchannels[j],
                                           num_outchannels_conv3x3,
-                                          3, 2, 1, bias=False),
+                                          3, 2, 1, bias=False),  # each level there is a 2-stride, and therefore be a 1/4 of total pixels
                                 BatchNorm2d(num_outchannels_conv3x3, momentum=BN_MOMENTUM)))
                         else:
                             num_outchannels_conv3x3 = num_inchannels[j]
                             conv3x3s.append(nn.Sequential(
                                 nn.Conv2d(num_inchannels[j],
                                           num_outchannels_conv3x3,
-                                          3, 2, 1, bias=False),
-                                BatchNorm2d(num_outchannels_conv3x3,
-                                            momentum=BN_MOMENTUM),
+                                          3, 2, 1, bias=False), # each level there is a 2-stride, and therefore be a 1/4 of total pixels)
+                                BatchNorm2d(num_outchannels_conv3x3, momentum=BN_MOMENTUM),
                                 nn.ReLU(inplace=True)))
                     fuse_layer.append(nn.Sequential(*conv3x3s))
             fuse_layers.append(nn.ModuleList(fuse_layer))
@@ -229,9 +224,9 @@ class HighResolutionModule(nn.Module):
             x[i] = self.branches[i](x[i])
 
         x_fuse = []
-        for i in range(len(self.fuse_layers)):
+        for i in range(len(self.fuse_layers)):  # index for output level
             y = x[0] if i == 0 else self.fuse_layers[i][0](x[0])
-            for j in range(1, self.num_branches):
+            for j in range(1, self.num_branches):  # index for input level
                 if i == j:
                     y = y + x[j]
                 elif j > i:
@@ -293,10 +288,8 @@ class HighResolutionNet(nn.Module):
         self.stage4_cfg = extra['STAGE4']
         num_channels = self.stage4_cfg['NUM_CHANNELS']
         block = blocks_dict[self.stage4_cfg['BLOCK']]
-        num_channels = [
-            num_channels[i] * block.expansion for i in range(len(num_channels))]
-        self.transition3 = self._make_transition_layer(
-            pre_stage_channels, num_channels)
+        num_channels = [num_channels[i] * block.expansion for i in range(len(num_channels))]
+        self.transition3 = self._make_transition_layer(pre_stage_channels, num_channels)
         self.stage4, pre_stage_channels = self._make_stage(
             self.stage4_cfg, num_channels, multi_scale_output=True)
 
@@ -356,6 +349,7 @@ class HighResolutionNet(nn.Module):
         return nn.ModuleList(transition_layers)
 
     def _make_layer(self, block, inplanes, planes, blocks, stride=1):
+        # interesting, this is almost like the branch
         downsample = None
         if stride != 1 or inplanes != planes * block.expansion:
             downsample = nn.Sequential(
@@ -418,13 +412,13 @@ class HighResolutionNet(nn.Module):
                 x_list.append(x)
         y_list = self.stage2(x_list)
 
-        x_list = []
-        for i in range(self.stage3_cfg['NUM_BRANCHES']):
-            if self.transition2[i] is not None:
-                x_list.append(self.transition2[i](y_list[-1]))
-            else:
-                x_list.append(y_list[i])
-        y_list = self.stage3(x_list)
+        # x_list = []
+        # for i in range(self.stage3_cfg['NUM_BRANCHES']):
+        #     if self.transition2[i] is not None:
+        #         x_list.append(self.transition2[i](y_list[-1]))
+        #     else:
+        #         x_list.append(y_list[i])
+        # y_list = self.stage3(x_list)
 
         x_list = []
         for i in range(self.stage4_cfg['NUM_BRANCHES']):
@@ -440,10 +434,10 @@ class HighResolutionNet(nn.Module):
         # x2 = F.interpolate(x[2], size=(height, width), mode='bilinear', align_corners=False)
         # x3 = F.interpolate(x[3], size=(height, width), mode='bilinear', align_corners=False)
         x0 = F.interpolate(x[0], size=self.output_size, mode='bilinear', align_corners=False)
-        x1 = F.interpolate(x[1], size=self.output_size, mode='bilinear', align_corners=False)
-        x2 = F.interpolate(x[2], size=self.output_size, mode='bilinear', align_corners=False)
-        x3 = F.interpolate(x[3], size=self.output_size, mode='bilinear', align_corners=False)
-        x = torch.cat([x0, x1, x2, x3], 1)
+        # x1 = F.interpolate(x[1], size=self.output_size, mode='bilinear', align_corners=False)
+        # x2 = F.interpolate(x[2], size=self.output_size, mode='bilinear', align_corners=False)
+        # x3 = F.interpolate(x[3], size=self.output_size, mode='bilinear', align_corners=False)
+        x = torch.cat([x0], 1)
         x = self.head(x)
 
         return x

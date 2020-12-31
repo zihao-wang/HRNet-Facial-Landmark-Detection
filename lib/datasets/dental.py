@@ -15,51 +15,61 @@ from ..utils.transforms import (crop, fliplr_joints, generate_target,
 class Dental(data.Dataset):
     """Dental dataset
     """
+
+
+    W_length = 173
+    H_length = 234
+
+    W_org_px = 1360
+    H_org_px = 1840
+
     def __init__(self, cfg, is_train=True):
         self.is_train = is_train
         self.color = cfg.MODEL.COLOR  # TODO: [cfg] select the annotated color
         self.num_points = 0
-        self.sigma = cfg.MODEL.SIGMA
         self.label_type = cfg.MODEL.TARGET_TYPE
         self.input_size = cfg.MODEL.IMAGE_SIZE
         self.output_size = cfg.MODEL.HEATMAP_SIZE
-        self.original_size = [1360, 1840]  # width height
+        self.sigma = cfg.MODEL.SIGMA / self.W_length * self.output_size[0]
         self.image_files = []
         self.annotation_files = []
-        self.factor = [self.output_size[0] / self.original_size[0], 
-                       self.output_size[1] / self.original_size[1]]
+        self.factor = [self.output_size[0] / self.W_org_px,
+                       self.output_size[1] / self.H_org_px]
         print('scaling factor', self.factor)
         if self.is_train:
-            data_dir = "data/train"
-            annotation_dir = "data/golden_train_annotation"
+            data_dir = "data/final_train/训练集"
+            annotation_dir = "data/final_train/训练集"
             for c in os.listdir(annotation_dir):
                 ann_file = os.path.join(annotation_dir, c, 'annotation.txt')
                 img_file = os.path.join(data_dir, c, '1.tiff')
-                if os.path.exists(img_file):
+                if os.path.exists(ann_file) and os.path.exists(img_file):
                     self.annotation_files.append(ann_file)
                     self.image_files.append(img_file)
+            print('there are ', len(os.listdir(annotation_dir)))
+            print('Training data :', len(self.image_files))
         else:
-            data_dir = "data/test/adult"
-            annotation_dir = "data/test/sorted_adult_annotation"
+            data_dir = "data/final_test/测试集/成年"
+            annotation_dir = "data/final_test/测试集/成年"
             for c in os.listdir(annotation_dir):
                 ann_file = os.path.join(annotation_dir, c, 'annotation.txt')
                 img_file = os.path.join(data_dir, c, '1.tiff')
-                if os.path.exists(img_file):
-                    self.annotation_files.append(ann_file)
-                    self.image_files.append(img_file)
-            
-            data_dir = "data/test/non-adult"
-            annotation_dir = "data/test/sorted_non-adult_annotation"
-            for c in os.listdir(annotation_dir):
-                ann_file = os.path.join(annotation_dir, c, 'annotation.txt')
-                img_file = os.path.join(data_dir, c, '1.tiff')
-                if os.path.exists(img_file):
+                if os.path.exists(ann_file) and os.path.exists(img_file):
                     self.annotation_files.append(ann_file)
                     self.image_files.append(img_file)
 
+            data_dir = "data/final_test/测试集/未成年"
+            annotation_dir = "data/final_test/测试集/未成年"
+            for c in os.listdir(annotation_dir):
+                ann_file = os.path.join(annotation_dir, c, 'annotation.txt')
+                img_file = os.path.join(data_dir, c, '1.tiff')
+                if os.path.exists(ann_file) and os.path.exists(img_file):
+                    self.annotation_files.append(ann_file)
+                    self.image_files.append(img_file)
+            print('Testing data:', len(self.image_files))
+
     def __len__(self):
         return len(self.annotation_files)
-    
+
     def load_img(self, idx):
         img_file = self.image_files[idx]
         # print(self.input_size, img_file)
@@ -73,7 +83,6 @@ class Dental(data.Dataset):
     def load_pts(self, idx):
         anno_file = self.annotation_files[idx]
         point_clouds = defaultdict(list)
-
         with open(anno_file, 'rt') as f:
             key = None
             for l in f.readlines():
@@ -84,6 +93,8 @@ class Dental(data.Dataset):
                 if key:
                     h, w = [float(x) for x in s.split(', ')]
                     point_clouds[key].append([w * self.factor[0], h * self.factor[1]])
+        # for color in ['yellow', 'red', 'green', 'blue']:
+        #         point_clouds[color] = point_clouds[color][::-1]
         if self.color.lower() == 'all':
             pts = []
             for color in ['yellow', 'red', 'green', 'blue']:
@@ -104,11 +115,12 @@ class Dental(data.Dataset):
         pts = self.load_pts(idx)
         _, W, H = img.shape
         # TODO: data argumentation
-        
+        assert W == self.input_size[0], H == self.input_size[1]
+
         target = np.zeros((self.get_num_points(), self.output_size[0], self.output_size[1]), dtype=np.float32)
         for i in range(self.get_num_points()):
             target[i] = generate_target(target[i], pts[i], self.sigma, label_type=self.label_type)
-        
+
         img = img.astype(np.float32)
         img = img/255
         img = torch.tensor(img)
@@ -121,3 +133,4 @@ class Dental(data.Dataset):
             'tpts': torch.tensor(pts)
         }
         return img, target, meta
+

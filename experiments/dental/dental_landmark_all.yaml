@@ -1,4 +1,4 @@
-GPUS: (0,)
+GPUS: (0, )
 WORKERS: 4
 PRINT_FREQ: 50
 
@@ -9,10 +9,10 @@ DATASET:
   ROT_FACTOR: 30
 MODEL:
   NAME: 'hrnet'
-  COLOR: 'yellow'
-  NUM_JOINTS: 15
+  COLOR: 'all'
+  NUM_JOINTS: 51
   INIT_WEIGHTS: true
-  PRETRAINED: 'hrnetv2_pretrained/hrnetv2_w18_imagenet_pretrained.pth'
+  PRETRAINED: ""
   SIGMA: 1.5
   IMAGE_SIZE:
     - 1360  # width
@@ -24,42 +24,30 @@ MODEL:
     FINAL_CONV_KERNEL: 1
     STAGE2:
       NUM_MODULES: 1
-      NUM_BRANCHES: 2
+      NUM_BRANCHES: 1
       BLOCK: BASIC
       NUM_BLOCKS:
-        - 4
-        - 4
+        - 1
       NUM_CHANNELS:
-        - 18
-        - 36
+        - 8
       FUSE_METHOD: SUM
     STAGE3:
-      NUM_MODULES: 4
-      NUM_BRANCHES: 3
+      NUM_MODULES: 1
+      NUM_BRANCHES: 1
       BLOCK: BASIC
       NUM_BLOCKS:
-        - 4
-        - 4
-        - 4
+        - 1
       NUM_CHANNELS:
-        - 18
-        - 36
-        - 72
+        - 8
       FUSE_METHOD: SUM
     STAGE4:
-      NUM_MODULES: 3
-      NUM_BRANCHES: 4
+      NUM_MODULES: 1
+      NUM_BRANCHES: 1
       BLOCK: BASIC
       NUM_BLOCKS:
-        - 4
-        - 4
-        - 4
-        - 4
+        - 1
       NUM_CHANNELS:
-        - 18
-        - 36
-        - 72
-        - 144
+        - 8
       FUSE_METHOD: SUM
 TRAIN:
   BATCH_SIZE_PER_GPU: 1

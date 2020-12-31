@@ -1,7 +1,7 @@
 GPUS: (0,)
 WORKERS: 4
-PRINT_FREQ: 5
-
+PRINT_FREQ: 50
+# 15 17 10 9
 DATASET:
   DATASET: Dental
   FLIP: true
@@ -9,17 +9,17 @@ DATASET:
   ROT_FACTOR: 30
 MODEL:
   NAME: 'hrnet'
-  COLOR: 'all'
-  NUM_JOINTS: 51
+  COLOR: 'blue'
+  NUM_JOINTS: 9
   INIT_WEIGHTS: true
   PRETRAINED: 'hrnetv2_pretrained/hrnetv2_w18_imagenet_pretrained.pth'
   SIGMA: 1.5
   IMAGE_SIZE:
-    - 85  # width
-    - 115  # height
+    - 340  # width
+    - 460  # height
   HEATMAP_SIZE:
-    - 85  # width
-    - 115  # height
+    - 340  # width
+    - 460  # height
   EXTRA:
     FINAL_CONV_KERNEL: 1
     STAGE2:
@@ -62,11 +62,11 @@ MODEL:
         - 144
       FUSE_METHOD: SUM
 TRAIN:
-  BATCH_SIZE_PER_GPU: 64
+  BATCH_SIZE_PER_GPU: 4
   SHUFFLE: true
   BEGIN_EPOCH: 0
-  END_EPOCH: 400
-  RESUME: false
+  END_EPOCH: 100
+  RESUME: true
   OPTIMIZER: 'adam'
   LR: 0.0001
   WD: 0.0
@@ -74,4 +74,4 @@ TRAIN:
   MOMENTUM: 0.0
   NESTEROV: false
 TEST:
-  BATCH_SIZE_PER_GPU: 64
+  BATCH_SIZE_PER_GPU: 8

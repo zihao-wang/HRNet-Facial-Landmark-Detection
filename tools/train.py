@@ -6,8 +6,9 @@
 
 import os
 import pprint
+import pandas as pd
 import argparse
-
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -21,7 +22,7 @@ from lib.config import config, update_config
 from lib.datasets import get_dataset
 from lib.core import function
 from lib.utils import utils
-
+CUDA_VISIBLE_DEVICES = 0,
 
 def parse_args():
 
@@ -59,6 +60,7 @@ def main():
         num_workers=config.WORKERS,
         pin_memory=config.PIN_MEMORY)
 
+
     val_data = dataset_type(config, is_train=False)
     val_loader = DataLoader(
         dataset=val_data,
@@ -82,7 +84,6 @@ def main():
 
     # loss
     criterion = torch.nn.MSELoss(size_average=True).cuda()
-
     optimizer = utils.get_optimizer(config, model)
 
     best_nme = 100
@@ -101,7 +102,7 @@ def main():
 
     if config.TRAIN.RESUME:
         model_state_file = os.path.join(final_output_dir,
-                                        'latest.pth')
+                                        'final.pth')
         if os.path.islink(model_state_file):
             checkpoint = torch.load(model_state_file)
             last_epoch = checkpoint['epoch']
@@ -112,11 +113,11 @@ def main():
                   .format(checkpoint['epoch']))
         else:
             print("=> no checkpoint found")
-
+    loss = []
     for epoch in range(last_epoch, config.TRAIN.END_EPOCH):
-        function.train(config, train_loader, model, criterion,
+        losses = function.train(config, train_loader, model, criterion,
                        optimizer, epoch, writer_dict)
-
+        loss.append(losses)
         lr_scheduler.step()
 
         # evaluate
@@ -144,7 +145,7 @@ def main():
                         f.write("{},{}\n".format(pts[j][1]/val_data.factor[1], 
                                                  pts[j][0]/val_data.factor[0]))
 
-
+    pd.DataFrame(data=loss).to_csv('loss2.csv')
     final_model_state_file = os.path.join(final_output_dir,
                                           'final_state.pth')
     logger.info('saving final model state to {}'.format(
