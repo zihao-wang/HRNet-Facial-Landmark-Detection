@@ -12,11 +12,9 @@ from PIL import Image, ImageFile
 from ..utils.transforms import (crop, fliplr_joints, generate_target,
                                 transform_pixel)
 
-
 class Dental(data.Dataset):
     """Dental dataset
     """
-
 
     W_length = 173
     H_length = 234
@@ -24,41 +22,35 @@ class Dental(data.Dataset):
     W_org_px = 1360
     H_org_px = 1840
 
-    def __init__(self, cfg, is_train=True, size=100000):
-        self.is_train = is_train
-        self.color = cfg.MODEL.COLOR  # TODO: [cfg] select the annotated color
+    def __init__(self, cfg, split="train", seed=1, train_ratio=0.8, size=100000):
+        self.cfg = cfg
         self.num_points = 0
         self.label_type = cfg.MODEL.TARGET_TYPE
         self.input_size = cfg.MODEL.IMAGE_SIZE
         self.output_size = cfg.MODEL.HEATMAP_SIZE
         self.sigma = cfg.MODEL.SIGMA / self.W_length * self.output_size[0]
-        self.size=size
+        self.size = size
         self.image_files = []
         self.annotation_files = []
         self.factor = [self.output_size[0] / self.W_org_px,
                        self.output_size[1] / self.H_org_px]
         print('scaling factor', self.factor)
-        if self.is_train:
+
+        if split.lower() == "train" and split.lower() == "valid":
+            np.random.seed(seed)
             data_dir = "data/final_train/训练集"
             annotation_dir = "data/final_train/训练集"
-            for c in os.listdir(annotation_dir):
+            selection = np.random.rand(len(os.listdir(annotation_dir)))
+            for i, c in enumerate(os.listdir(annotation_dir)):
                 ann_file = os.path.join(annotation_dir, c, 'annotation.txt')
                 img_file = os.path.join(data_dir, c, '1.tiff')
-                if os.path.exists(ann_file) and os.path.exists(img_file):
-                    self.annotation_files.append(ann_file)
-                    self.image_files.append(img_file)
-            print('there are ', len(os.listdir(annotation_dir)))
-            print('Training data :', len(self.image_files))
+                if ((split.lower() == "train" and selection[i] < train_ratio)
+                     or
+                   (split.lower() == "valid" and selection[i] > train_ratio)):
+                    if os.path.exists(ann_file) and os.path.exists(img_file):
+                        self.annotation_files.append(ann_file)
+                        self.image_files.append(img_file)
         else:
-            data_dir = "data/final_test/测试集/成年"
-            annotation_dir = "data/final_test/测试集/成年"
-            for c in os.listdir(annotation_dir):
-                ann_file = os.path.join(annotation_dir, c, 'annotation.txt')
-                img_file = os.path.join(data_dir, c, '1.tiff')
-                if os.path.exists(ann_file) and os.path.exists(img_file):
-                    self.annotation_files.append(ann_file)
-                    self.image_files.append(img_file)
-
             data_dir = "data/final_test/测试集/未成年"
             annotation_dir = "data/final_test/测试集/未成年"
             for c in os.listdir(annotation_dir):

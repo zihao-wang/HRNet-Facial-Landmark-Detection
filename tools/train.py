@@ -52,7 +52,7 @@ def main():
     gpus = list(config.GPUS)
 
     dataset_type = get_dataset(config)
-    train_data = dataset_type(config, is_train=True)
+    train_data = dataset_type(config, split="train")
     train_loader = DataLoader(
         dataset=train_data,
         batch_size=config.TRAIN.BATCH_SIZE_PER_GPU*len(gpus),
@@ -61,7 +61,7 @@ def main():
         pin_memory=config.PIN_MEMORY)
 
 
-    val_data = dataset_type(config, is_train=False)
+    val_data = dataset_type(config, split="valid")
     val_loader = DataLoader(
         dataset=val_data,
         batch_size=config.TEST.BATCH_SIZE_PER_GPU*len(gpus),
@@ -134,11 +134,13 @@ def main():
              "epoch": epoch + 1,
              "best_nme": best_nme,
              "optimizer": optimizer.state_dict(),
-             }, predictions, is_best, final_output_dir, 'checkpoint_{}.pth'.format(epoch))
+             }, predictions, is_best, final_output_dir,
+                'checkpoint_{}.pth'.format(epoch))
         if is_best:
             for i in range(len(predictions)):
                 afile = val_data.annotation_files[i]
-                new_afile = '{}.{}.txt'.format(afile, os.path.basename(args.cfg).split('.')[0])
+                new_afile = '{}.{}.txt'.format(afile,
+                                    os.path.basename(args.cfg).split('.')[0])
                 with open(new_afile, 'wt') as f:
                     pts = predictions[i].cpu().numpy()
                     for j in range(len(pts)):

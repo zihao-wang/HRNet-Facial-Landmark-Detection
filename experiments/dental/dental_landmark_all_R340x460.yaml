@@ -1,28 +1,24 @@
-GPUS: (0,)
+GPUS: (0, )
 WORKERS: 4
-PRINT_FREQ: 20
+PRINT_FREQ: 50
 
 DATASET:
-  DATASET: COFW
-  ROOT: './data'
-  TRAINSET: './data/cofw/COFW_train_color.mat'
-  TESTSET: './data/cofw/COFW_test_color.mat'
+  DATASET: Dental
   FLIP: true
   SCALE_FACTOR: 0.25
   ROT_FACTOR: 30
-
 MODEL:
   NAME: 'hrnet'
-  NUM_JOINTS: 29
+  NUM_JOINTS: 51
   INIT_WEIGHTS: true
-  PRETRAINED: 'hrnetv2_pretrained/hrnetv2_w18_imagenet_pretrained.pth'
-  SIGMA: 1.5
+  PRETRAINED: ""
+  SIGMA: 5.0 # Sigma in mm
   IMAGE_SIZE:
-    - 256
-    - 256
+    - 340  # width
+    - 460  # height
   HEATMAP_SIZE:
-    - 64
-    - 64
+    - 340  # width
+    - 460  # height
   EXTRA:
     FINAL_CONV_KERNEL: 1
     STAGE2:
@@ -65,10 +61,10 @@ MODEL:
         - 144
       FUSE_METHOD: SUM
 TRAIN:
-  BATCH_SIZE_PER_GPU: 16
+  BATCH_SIZE_PER_GPU: 4
   SHUFFLE: true
   BEGIN_EPOCH: 0
-  END_EPOCH: 60
+  END_EPOCH: 100
   RESUME: true
   OPTIMIZER: 'adam'
   LR: 0.0001
@@ -77,4 +73,4 @@ TRAIN:
   MOMENTUM: 0.0
   NESTEROV: false
 TEST:
-  BATCH_SIZE_PER_GPU: 8
+  BATCH_SIZE_PER_GPU: 1

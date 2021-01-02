@@ -29,7 +29,7 @@ def parse_args():
 
     parser.add_argument('--cfg', help='experiment configuration filename',
                         required=True, type=str)
-    parser.add_argument('--model-file', help='model parameters', required=True, type=str)
+    parser.add_argument('--model_file', help='model parameters', required=True, type=str)
 
     args = parser.parse_args()
     update_config(config, args)
@@ -56,7 +56,6 @@ def main():
     model = models.get_face_alignment_net(config)
     #
     gpus = list(config.GPUS)
-    model = nn.DataParallel(model, device_ids=gpus).cuda()
     #
     # # load model
     state_dict = torch.load(args.model_file)
@@ -65,6 +64,7 @@ def main():
         model.load_state_dict(state_dict)
     else:
         model.module.load_state_dict(state_dict)
+    model = nn.DataParallel(model, device_ids=gpus).cuda()
     #
     dataset_type = get_dataset(config)
 
