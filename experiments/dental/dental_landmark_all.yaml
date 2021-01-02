@@ -13,47 +13,59 @@ MODEL:
   NUM_JOINTS: 51
   INIT_WEIGHTS: true
   PRETRAINED: ""
-  SIGMA: 1.5
+  SIGMA: 5.0
   IMAGE_SIZE:
-    - 1360  # width
-    - 1840  # height
+    - 340  # width
+    - 460  # height
   HEATMAP_SIZE:
-    - 1360  # width
-    - 1840  # height
+    - 340  # width
+    - 460  # height
   EXTRA:
     FINAL_CONV_KERNEL: 1
     STAGE2:
       NUM_MODULES: 1
-      NUM_BRANCHES: 1
+      NUM_BRANCHES: 2
       BLOCK: BASIC
       NUM_BLOCKS:
-        - 1
+        - 4
+        - 4
       NUM_CHANNELS:
-        - 8
+        - 18
+        - 36
       FUSE_METHOD: SUM
     STAGE3:
-      NUM_MODULES: 1
-      NUM_BRANCHES: 1
+      NUM_MODULES: 4
+      NUM_BRANCHES: 3
       BLOCK: BASIC
       NUM_BLOCKS:
-        - 1
+        - 4
+        - 4
+        - 4
       NUM_CHANNELS:
-        - 8
+        - 18
+        - 36
+        - 72
       FUSE_METHOD: SUM
     STAGE4:
-      NUM_MODULES: 1
-      NUM_BRANCHES: 1
+      NUM_MODULES: 3
+      NUM_BRANCHES: 4
       BLOCK: BASIC
       NUM_BLOCKS:
-        - 1
+        - 4
+        - 4
+        - 4
+        - 4
       NUM_CHANNELS:
-        - 8
+        - 18
+        - 36
+        - 72
+        - 144
       FUSE_METHOD: SUM
 TRAIN:
-  BATCH_SIZE_PER_GPU: 1
+  BATCH_SIZE_PER_GPU: 4
   SHUFFLE: true
   BEGIN_EPOCH: 0
-  END_EPOCH: 60
+  END_EPOCH: 100
   RESUME: true
   OPTIMIZER: 'adam'
   LR: 0.0001

@@ -412,13 +412,13 @@ class HighResolutionNet(nn.Module):
                 x_list.append(x)
         y_list = self.stage2(x_list)
 
-        # x_list = []
-        # for i in range(self.stage3_cfg['NUM_BRANCHES']):
-        #     if self.transition2[i] is not None:
-        #         x_list.append(self.transition2[i](y_list[-1]))
-        #     else:
-        #         x_list.append(y_list[i])
-        # y_list = self.stage3(x_list)
+        x_list = []
+        for i in range(self.stage3_cfg['NUM_BRANCHES']):
+            if self.transition2[i] is not None:
+                x_list.append(self.transition2[i](y_list[-1]))
+            else:
+                x_list.append(y_list[i])
+        y_list = self.stage3(x_list)
 
         x_list = []
         for i in range(self.stage4_cfg['NUM_BRANCHES']):
@@ -434,10 +434,10 @@ class HighResolutionNet(nn.Module):
         # x2 = F.interpolate(x[2], size=(height, width), mode='bilinear', align_corners=False)
         # x3 = F.interpolate(x[3], size=(height, width), mode='bilinear', align_corners=False)
         x0 = F.interpolate(x[0], size=self.output_size, mode='bilinear', align_corners=False)
-        # x1 = F.interpolate(x[1], size=self.output_size, mode='bilinear', align_corners=False)
-        # x2 = F.interpolate(x[2], size=self.output_size, mode='bilinear', align_corners=False)
-        # x3 = F.interpolate(x[3], size=self.output_size, mode='bilinear', align_corners=False)
-        x = torch.cat([x0], 1)
+        x1 = F.interpolate(x[1], size=self.output_size, mode='bilinear', align_corners=False)
+        x2 = F.interpolate(x[2], size=self.output_size, mode='bilinear', align_corners=False)
+        x3 = F.interpolate(x[3], size=self.output_size, mode='bilinear', align_corners=False)
+        x = torch.cat([x0, x1, x2, x3], 1)
         x = self.head(x)
 
         return x

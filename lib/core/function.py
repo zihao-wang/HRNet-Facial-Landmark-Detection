@@ -11,11 +11,14 @@ from __future__ import print_function
 import time
 import logging
 import tqdm
+import os
 
 import torch
 import numpy as np
 
 from .evaluation import decode_preds, compute_nme
+
+import matplotlib.pyplot as plt
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +64,25 @@ def train(config, train_loader, model, critertion, optimizer,
         output = model(inp)
         target = target.cuda(non_blocking=True)
         loss = critertion(output, target)
+
+        # debug single image prediction
+        # _, num_pts, W, H = target.shape
+        # os.makedirs("single_sample_debug", exist_ok=True)
+        # print("debugging single image", epoch)
+        # output_arr = output.cpu().detach().numpy()
+        # target_arr = target.cpu().numpy()
+        # img_arr = inp.cpu().numpy()
+        # for i_pts in range(num_pts):
+        #     fig, (ax0, ax1, ax2) = plt.subplots(nrows=1, ncols=3)
+        #     ax0.imshow(output_arr[0, i_pts, :, :])
+        #     ax0.set_title("output at epoch {}, for point {}, max={}, min={}".format(epoch, i_pts, output_arr.max(), output_arr.min()))
+        #     ax1.imshow(img_arr[0, 1, :, :])
+        #     # x, y = meta['pts'][0, i].cpu().numpy().tolist()
+        #     # ax1.scatter([x], [y], 'r')
+        #     ax2.imshow(target_arr[0, i_pts, :, :])
+        #     ax2.set_title("target at epoch {}, for point {}, max={}, min={}".format(epoch, i_pts, target_arr.max(), target_arr.min()))
+        #     fig.savefig("single_sample_debug/pts#{}@epoch{}".format(i_pts, epoch))
+
         wp = [10, 11, 12, 13, 26,27,28,29,30,31]
         # for i in wp:
         #     for j in range(len(target)):
@@ -72,6 +94,7 @@ def train(config, train_loader, model, critertion, optimizer,
         preds = decode_preds(score_map, meta['center'], meta['scale'], [64, 64])
 
         nme_batch = compute_nme(preds, meta)
+
         nme_batch_sum = nme_batch_sum + np.sum(nme_batch)
         nme_count = nme_count + preds.size(0)
 

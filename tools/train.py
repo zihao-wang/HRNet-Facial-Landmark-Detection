@@ -142,7 +142,7 @@ def main():
                 with open(new_afile, 'wt') as f:
                     pts = predictions[i].cpu().numpy()
                     for j in range(len(pts)):
-                        f.write("{},{}\n".format(pts[j][1]/val_data.factor[1], 
+                        f.write("{},{}\n".format(pts[j][1]/val_data.factor[1],
                                                  pts[j][0]/val_data.factor[0]))
 
     pd.DataFrame(data=loss).to_csv('loss2.csv')

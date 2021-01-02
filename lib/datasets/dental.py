@@ -5,6 +5,7 @@ import cv2
 import numpy as np
 import pandas as pd
 import torch
+import torch.nn.functional as F
 import torch.utils.data as data
 from PIL import Image, ImageFile
 
@@ -23,7 +24,7 @@ class Dental(data.Dataset):
     W_org_px = 1360
     H_org_px = 1840
 
-    def __init__(self, cfg, is_train=True):
+    def __init__(self, cfg, is_train=True, size=100000):
         self.is_train = is_train
         self.color = cfg.MODEL.COLOR  # TODO: [cfg] select the annotated color
         self.num_points = 0
@@ -31,6 +32,7 @@ class Dental(data.Dataset):
         self.input_size = cfg.MODEL.IMAGE_SIZE
         self.output_size = cfg.MODEL.HEATMAP_SIZE
         self.sigma = cfg.MODEL.SIGMA / self.W_length * self.output_size[0]
+        self.size=size
         self.image_files = []
         self.annotation_files = []
         self.factor = [self.output_size[0] / self.W_org_px,
@@ -68,7 +70,7 @@ class Dental(data.Dataset):
             print('Testing data:', len(self.image_files))
 
     def __len__(self):
-        return len(self.annotation_files)
+        return min(len(self.annotation_files), self.size)
 
     def load_img(self, idx):
         img_file = self.image_files[idx]
@@ -92,7 +94,7 @@ class Dental(data.Dataset):
                     continue
                 if key:
                     h, w = [float(x) for x in s.split(', ')]
-                    point_clouds[key].append([w * self.factor[0], h * self.factor[1]])
+                    point_clouds[key].append([h * self.factor[1], w * self.factor[0]])
         # for color in ['yellow', 'red', 'green', 'blue']:
         #         point_clouds[color] = point_clouds[color][::-1]
         if self.color.lower() == 'all':
@@ -113,9 +115,9 @@ class Dental(data.Dataset):
     def __getitem__(self, idx):
         img = self.load_img(idx)
         pts = self.load_pts(idx)
+        # print("get item", idx)
         _, W, H = img.shape
         # TODO: data argumentation
-        assert W == self.input_size[0], H == self.input_size[1]
 
         target = np.zeros((self.get_num_points(), self.output_size[0], self.output_size[1]), dtype=np.float32)
         for i in range(self.get_num_points()):
