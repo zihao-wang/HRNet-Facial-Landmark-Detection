@@ -6,9 +6,10 @@ DATASET:
   DATASET: Dental
   FLIP: true
   SCALE_FACTOR: 0.25
-  ROT_FACTOR: 30
+  ROT_FACTOR: [0]
 MODEL:
   NAME: 'hrnet'
+  COLOR: 'all'
   NUM_JOINTS: 51
   INIT_WEIGHTS: true
   PRETRAINED: ""

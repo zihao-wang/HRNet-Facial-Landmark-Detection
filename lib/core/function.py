@@ -83,7 +83,7 @@ def train(config, train_loader, model, critertion, optimizer,
         #     ax2.set_title("target at epoch {}, for point {}, max={}, min={}".format(epoch, i_pts, target_arr.max(), target_arr.min()))
         #     fig.savefig("single_sample_debug/pts#{}@epoch{}".format(i_pts, epoch))
 
-        wp = [10, 11, 12, 13, 26,27,28,29,30,31]
+        # wp = [10, 11, 12, 13, 26,27,28,29,30,31]
         # for i in wp:
         #     for j in range(len(target)):
         #         loss = loss + critertion(output[j][i], target[j][i])

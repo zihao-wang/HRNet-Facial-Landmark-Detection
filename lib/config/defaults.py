@@ -80,7 +80,7 @@ _C.DATASET.TESTSET = ''
 # training data augmentation
 _C.DATASET.FLIP = True
 _C.DATASET.SCALE_FACTOR = 0.25
-_C.DATASET.ROT_FACTOR = 30
+_C.DATASET.ROT_FACTOR = [30]
 
 # train
 _C.TRAIN = CN()

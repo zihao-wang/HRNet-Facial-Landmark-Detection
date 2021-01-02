@@ -216,6 +216,7 @@ def crop(img, center, scale, output_size, rot=0):
 def generate_target(img, pt, sigma, label_type='Gaussian'):
     # Check that any part of the gaussian is in-bounds
     tmp_size = sigma * 3
+    pt[0], pt[1] = pt[1], pt[0]
     ul = [int(pt[0] - tmp_size), int(pt[1] - tmp_size)]
     br = [int(pt[0] + tmp_size + 1), int(pt[1] + tmp_size + 1)]
     if (ul[0] >= img.shape[1] or ul[1] >= img.shape[0] or
