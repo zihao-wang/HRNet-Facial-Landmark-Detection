@@ -22,7 +22,7 @@ class Dental(data.Dataset):
     W_org_px = 1360
     H_org_px = 1840
 
-    def __init__(self, cfg, split="train", seed=1, train_ratio=0.8, size=10000):
+    def __init__(self, cfg, split="train", seed=1, train_ratio=0.8, size=100000):
         self.cfg = cfg
         self.num_points = 0
         self.label_type = cfg.MODEL.TARGET_TYPE
@@ -37,7 +37,7 @@ class Dental(data.Dataset):
                        self.output_size[1] / self.H_org_px]
         print('scaling factor', self.factor)
 
-        if split.lower() == "train" and split.lower() == "valid":
+        if split.lower() == "train" or split.lower() == "valid":
             np.random.seed(seed)
             data_dir = "data/final_train/训练集"
             annotation_dir = "data/final_train/训练集"
@@ -51,6 +51,7 @@ class Dental(data.Dataset):
                     if os.path.exists(ann_file) and os.path.exists(img_file):
                         self.annotation_files.append(ann_file)
                         self.image_files.append(img_file)
+            print("{} samples in {} split".format(len(self.image_files), split.lower()))
         else:
             data_dir = "data/final_test/测试集/未成年"
             annotation_dir = "data/final_test/测试集/未成年"
@@ -131,7 +132,7 @@ class Dental(data.Dataset):
         meta = {
             'index': idx,
             'center': torch.tensor([W//2, H//2]),
-            'scale': 1,
+            'scale_factor':  self.W_length / self.input_size[0],
             'pts': torch.tensor(pts),
             'tpts': torch.tensor(pts)
         }

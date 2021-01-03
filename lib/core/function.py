@@ -54,7 +54,7 @@ def train(config, train_loader, model, critertion, optimizer,
     model.train()
     nme_count = 0
     nme_batch_sum = 0
-
+    diff_list = []
     end = time.time()
     for i, (inp, target, meta) in tqdm.tqdm(enumerate(train_loader)):
         # measure data time
@@ -65,38 +65,17 @@ def train(config, train_loader, model, critertion, optimizer,
         target = target.cuda(non_blocking=True)
         loss = critertion(output, target)
 
-        # debug single image prediction
-        # _, num_pts, W, H = target.shape
-        # os.makedirs("single_sample_debug", exist_ok=True)
-        # print("debugging single image", epoch)
-        # output_arr = output.cpu().detach().numpy()
-        # target_arr = target.cpu().numpy()
-        # img_arr = inp.cpu().numpy()
-        # for i_pts in range(num_pts):
-        #     fig, (ax0, ax1, ax2) = plt.subplots(nrows=1, ncols=3)
-        #     ax0.imshow(output_arr[0, i_pts, :, :])
-        #     ax0.set_title("output at epoch {}, for point {}, max={}, min={}".format(epoch, i_pts, output_arr.max(), output_arr.min()))
-        #     ax1.imshow(img_arr[0, 1, :, :])
-        #     # x, y = meta['pts'][0, i].cpu().numpy().tolist()
-        #     # ax1.scatter([x], [y], 'r')
-        #     ax2.imshow(target_arr[0, i_pts, :, :])
-        #     ax2.set_title("target at epoch {}, for point {}, max={}, min={}".format(epoch, i_pts, target_arr.max(), target_arr.min()))
-        #     fig.savefig("single_sample_debug/pts#{}@epoch{}".format(i_pts, epoch))
-
-        # wp = [10, 11, 12, 13, 26,27,28,29,30,31]
-        # for i in wp:
-        #     for j in range(len(target)):
-        #         loss = loss + critertion(output[j][i], target[j][i])
-        # loss = critertion(output, target) + pow((target[i][10][0] - inp[i][10][0]) , 2) + pow((target[i][10][1] - inp[i][10][1]), 2)
 
         # NME
         score_map = output.data.cpu()
-        preds = decode_preds(score_map, meta['center'], meta['scale'], [64, 64])
+        preds = decode_preds(score_map)
 
-        nme_batch = compute_nme(preds, meta)
+        nme_batch, diff_batch = compute_nme(preds, meta)
 
         nme_batch_sum = nme_batch_sum + np.sum(nme_batch)
         nme_count = nme_count + preds.size(0)
+
+        diff_list.append(diff_batch)
 
         # optimize
         optimizer.zero_grad()
@@ -124,11 +103,44 @@ def train(config, train_loader, model, critertion, optimizer,
                 writer_dict['train_global_steps'] = global_steps + 1
 
         end = time.time()
+
+
+        # debug single image prediction
+        if False:
+            _, num_pts, W, H = target.shape
+            os.makedirs("single_sample_debug", exist_ok=True)
+            print("debugging single image", epoch)
+            output_arr = output.cpu().detach().numpy()
+            target_arr = target.cpu().numpy()
+            img_arr = inp.cpu().numpy()
+            target_pts = meta['pts'].detach().cpu().numpy()[0]
+            output_pts = preds.detach().cpu().numpy()[0]
+            for i_pts in range(num_pts):
+                fig, (ax0, ax1, ax2) = plt.subplots(nrows=1, ncols=3)
+                ax0.imshow(output_arr[0, i_pts, :, :])
+                ax0.set_title("output at epoch {}, for point {}\n"
+                              "max={:.2f}, min={:.2f}\n"
+                              "w={:.2f}, h={:.2f}".format(
+                                  epoch, i_pts,
+                                  output_arr.max(), output_arr.min(),
+                                  output_pts[i_pts][0], output_pts[i_pts][1]))
+                ax1.imshow(img_arr[0, 1, :, :])
+                ax2.imshow(target_arr[0, i_pts, :, :])
+                ax2.set_title("target at epoch {}, for point {}\n"
+                              "max={:.2f}, min={:.2f}\n"
+                              "w={:.2f}, h={:.2f}".format(
+                                  epoch, i_pts,
+                                  target_arr.max(), target_arr.min(),
+                                  target_pts[i_pts][0], target_pts[i_pts][1]))
+                fig.savefig("single_sample_debug/pts#{}@epoch{}".format(i_pts, epoch))
+            continue
+
+
     nme = nme_batch_sum / nme_count
     msg = 'Train Epoch {} time:{:.4f} loss:{:.4f} nme:{:.4f}'\
         .format(epoch, batch_time.avg, losses.avg, nme)
     logger.info(msg)
-    return losses.avg
+    return losses.avg, np.concatenate(diff_list, axis=0)
 
 
 def validate(config, val_loader, model, criterion, epoch, writer_dict):
@@ -148,6 +160,8 @@ def validate(config, val_loader, model, criterion, epoch, writer_dict):
     count_failure_3 = 0
     end = time.time()
 
+    diff_list = []
+
     with torch.no_grad():
         for i, (inp, target, meta) in enumerate(val_loader):
             data_time.update(time.time() - end)
@@ -158,9 +172,11 @@ def validate(config, val_loader, model, criterion, epoch, writer_dict):
             # loss
             loss = criterion(output, target)
 
-            preds = decode_preds(score_map, meta['center'], meta['scale'], [64, 64])
+            preds = decode_preds(score_map)
             # NME
-            nme_temp = compute_nme(preds, meta)
+            nme_temp, diff_batch = compute_nme(preds, meta)
+            diff_list.append(diff_batch)
+
             # Failure Rate under different threshold
             failure_1 = (nme_temp > 1).sum()
             failure_3 = (nme_temp > 3).sum()
@@ -194,7 +210,7 @@ def validate(config, val_loader, model, criterion, epoch, writer_dict):
         writer.add_scalar('valid_nme', nme, global_steps)
         writer_dict['valid_global_steps'] = global_steps + 1
 
-    return nme, predictions
+    return nme, predictions, np.concatenate(diff_list, axis=0)
 
 
 def inference(config, data_loader, model):

@@ -113,15 +113,20 @@ def main():
         else:
             print("=> no checkpoint found")
     loss = []
+
     for epoch in range(last_epoch, config.TRAIN.END_EPOCH):
-        losses = function.train(config, train_loader, model, criterion,
+        losses, diff = function.train(config, train_loader, model, criterion,
                        optimizer, epoch, writer_dict)
         loss.append(losses)
         lr_scheduler.step()
 
+        np.save(os.path.join(final_output_dir, "train_diff@epoch{}".format(epoch)), diff)
+
         # evaluate
-        nme, predictions = function.validate(config, val_loader, model,
+        nme, predictions, diff = function.validate(config, val_loader, model,
                                              criterion, epoch, writer_dict)
+
+        np.save(os.path.join(final_output_dir, "valid_diff@epoch{}".format(epoch)), diff)
 
         is_best = nme < best_nme
         best_nme = min(nme, best_nme)

@@ -38,48 +38,18 @@ def compute_nme(preds, meta):
     targets = meta['pts']
     preds = preds.numpy()
     target = targets.cpu().numpy()
-    
-    N = preds.shape[0]
-    L = preds.shape[1]
-    rmse = np.zeros(N)
-
-    for i in range(N):
-        pts_pred, pts_gt = preds[i, ], target[i, ]
-        if L == 19:  # aflw
-            interocular = meta['box_size'][i]
-        elif L == 29:  # cofw
-            interocular = np.linalg.norm(pts_gt[8, ] - pts_gt[9, ])
-        elif L == 68:  # 300w
-            # interocular
-            interocular = np.linalg.norm(pts_gt[36, ] - pts_gt[45, ])
-        elif L == 98:
-            interocular = np.linalg.norm(pts_gt[60, ] - pts_gt[72, ])
-        else:
-            interocular = 1
-        rmse[i] = np.sum(np.linalg.norm(pts_pred - pts_gt, axis=1)) / (interocular * L)
-
-    return rmse
+    diff = preds - target
+    scale = meta['scale_factor'].numpy()[0]
+    diff *= scale
+    rmse = np.mean(np.linalg.norm(diff, axis=-1), axis=1)
+    return rmse, diff
 
 
-def decode_preds(output, center, scale, res):
+def decode_preds(output):
     coords = get_preds(output)  # float type
 
     coords = coords.cpu()
-    # pose-processing
-    # for n in range(coords.size(0)):
-    #     for p in range(coords.size(1)):
-    #         hm = output[n][p]
-    #         px = int(math.floor(coords[n][p][0]))
-    #         py = int(math.floor(coords[n][p][1]))
-    #         if (px > 1) and (px < res[0]) and (py > 1) and (py < res[1]):
-    #             diff = torch.Tensor([hm[py - 1][px] - hm[py - 1][px - 2], hm[py][px - 1]-hm[py - 2][px - 1]])
-    #             coords[n][p] += diff.sign() * .25
-    # coords += 0.5
     preds = coords.clone()
-
-    # Transform back
-    # for i in range(coords.size(0)):
-    #     preds[i] = transform_preds(coords[i], center[i], scale[i], res)
 
     if preds.dim() < 3:
         preds = preds.view(1, preds.size())
