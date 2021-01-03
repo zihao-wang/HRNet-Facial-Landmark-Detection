@@ -5,13 +5,20 @@ import os
 
 visfolder = "visualize"
 
-def visualize_diff_tensor(input_folder, output_folder):
+
+
+def visualize_diff_tensor(input_folder, output_folder, label_filter=lambda s: int(s[-1]) % 5 == 0):
     os.makedirs(os.path.join(visfolder, output_folder), exist_ok=True)
     for filename in tqdm(os.listdir(input_folder)):
         if filename.endswith('npy'):
             filetitle = os.path.basename(filename).split('.')[0]
             name, label = filetitle.split("@")
             diff = np.load(os.path.join(input_folder, filename))
+
+            if label_filter(label) == False:
+                continue
+
+            print(filetitle)
 
             num_samples, num_points, coordinates = diff.shape
             for i in range(num_points):
